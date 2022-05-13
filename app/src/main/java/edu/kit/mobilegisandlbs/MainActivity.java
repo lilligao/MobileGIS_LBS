@@ -2,16 +2,16 @@ package edu.kit.mobilegisandlbs;
 
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,160 +20,101 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-
-import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private TextView text;
-    private TextView provider;
     int PERMISSION_ID = 44;
     // initializing
     // FusedLocationProviderClient
     // object
-    FusedLocationProviderClient mFusedLocationClient;
+    // FusedLocationProviderClient mFusedLocationClient;
 
+
+    @RequiresApi(api = Build.VERSION_CODES.O) // Denotes that the annotated element should only be called on the given API
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        provider = (TextView) findViewById(R.id.provider);
-        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        TextView provider = findViewById(R.id.provider);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         List<String> providerNames = locationManager.getAllProviders();
         StringBuilder stringBuilder = new StringBuilder();
-        for (Iterator<String> iterator = providerNames.iterator(); iterator.hasNext();){
-            stringBuilder.append(iterator.next()+"\n");
+        for (String providerName : providerNames) {
+            stringBuilder.append(providerName).append("\n");
         }
         provider.setText(stringBuilder.toString());
-
-        text = (TextView) findViewById(R.id.location_coord);
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        // get text field by id
+        TextView text = findViewById(R.id.location_coord);
+        // Create location services client
+        // mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         // method to get the location
-        getLastLocation();
-//
-//        LocationListener locationListener = new MyLocationListener();
-//
-//        locationManager.requestLocationUpdates(
-//                LocationManager.GPS_PROVIDER,//GPS as provider
-//                1000,//update every 1 sec
-//                1000,//every 1 m
-//                locationListener
-//        );
-//        Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-//        if (location != null) {
-//            text.setText("Latitude: " + location.getLatitude() + "\nLongitude: " + location.getLongitude() + "\nAltitude: " + location.getAltitude() + "\nHorizontal accuracy radius: " + location.getAccuracy() + "m\nAltitude accuracy: ");
-//        } else {
-//            text.setText("GPS-Data unavailable!");
-//        }
-    }
-    @SuppressLint("MissingPermission")
-    private void getLastLocation() {
-        // check if permissions are given
-        if (checkPermissions()) {
+        // getLastLocation();
 
-            // check if location is enabled
-            if (isLocationEnabled()) {
+        // check if location is enabled
+        if (isLocationEnabled(locationManager)) {
+            Location location = requestNewLocationData(locationManager);
 
-                // getting last location from FusedLocationClient object
-                mFusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                    @RequiresApi(api = Build.VERSION_CODES.O)
-                    @Override
-                    public void onSuccess(Location location){
-                        if (location == null) {
-                            requestNewLocationData();
-                        } else {
-                            text.setText("Latitude: " + location.getLatitude() + "\nLongitude: " + location.getLongitude() + "\nAltitude: " + location.getAltitude() + "\nHorizontal accuracy radius: " + location.getAccuracy() + "m\nAltitude accuracy: "+ location.getVerticalAccuracyMeters() + "m");
-                        }
-                    }
-                });
-            } else {
-                Toast.makeText(this, "Please turn on" + " your location...", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                startActivity(intent);
+            if (location == null) {
+                location = requestNewLocationData(locationManager);
             }
+            // getAccuracy (): Returns the estimated horizontal accuracy radius in meters of this location at the 68th percentile confidence level.
+            // getVerticalAccuracyMeters (): Returns the estimated altitude accuracy in meters of this location at the 68th percentile confidence level.
+            text.setText("GPS Provider Location\nLatitude: " + location.getLatitude() + "\nLongitude: " + location.getLongitude() + "\nAltitude: " + location.getAltitude() + "\nHorizontal accuracy radius: " + location.getAccuracy() + "m\nAltitude accuracy: " + location.getVerticalAccuracyMeters() + "m");
         } else {
-            // if permissions aren't available, request for permissions
-            requestPermissions();
+            // A toast provides simple feedback about an operation in a small popup.
+            Toast.makeText(this, "Please turn on" + " your location...", Toast.LENGTH_LONG).show();
+            // An intent is an abstract description of an operation to be performed.
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(intent);
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private void requestNewLocationData() {
+    private Location requestNewLocationData(LocationManager locationManager) {
 
-        // Initializing LocationRequest object with appropriate methods
-        LocationRequest mLocationRequest = LocationRequest.create();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(5);
-        mLocationRequest.setFastestInterval(0);
-        mLocationRequest.setNumUpdates(1);
-
-        // setting LocationRequest on FusedLocationClient
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-    }
-
-    private LocationCallback mLocationCallback = new LocationCallback() {
-
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        @Override
-        public void onLocationResult(LocationResult locationResult) {
-            Location mLastLocation = locationResult.getLastLocation();
-            text.setText("Latitude: " + mLastLocation.getLatitude() + "\nLongitude: " + mLastLocation.getLongitude() + "\nAltitude: " + mLastLocation.getAltitude() + "\nHorizontal accuracy radius: " + mLastLocation.getAccuracy() + "m\nAltitude accuracy: "+ mLastLocation.getVerticalAccuracyMeters() + "m");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            ActivityCompat.requestPermissions(this, new String[]{
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_ID);
         }
-    };
+        locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,//GPS as provider
+                1000,//update every 1 sec
+                1,//every 1 m
+                new LocationListener() {
+                    @Override
+                    public void onLocationChanged(@NonNull Location location) {
+                    }
 
-    // method to check for permissions
-    private boolean checkPermissions() {
-        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                    @Override
+                    public void onProviderDisabled(String provider) {
+                        Log.d("Latitude", "disable");
+                    }
 
-        // If we want background location
-        // on Android 10.0 and higher,
-        // use:
-        // ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    @Override
+                    public void onProviderEnabled(String provider) {
+                        Log.d("Latitude", "enable");
+                    }
+
+                    @Override
+                    public void onStatusChanged(String provider, int status, Bundle extras) {
+                        Log.d("Latitude", "status");
+                    }
+                }
+        );
+        return locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
     }
 
-    // method to request for permissions
-    private void requestPermissions() {
-        ActivityCompat.requestPermissions(this, new String[]{
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_ID);
-    }
-
-    // method to check
-    // if location is enabled
-    private boolean isLocationEnabled() {
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-    }
-
-    // If everything is alright then
-    @Override
-    public void
-    onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == PERMISSION_ID) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getLastLocation();
-            }
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (checkPermissions()) {
-            getLastLocation();
-        }
+    // method to check if location is enabled
+    private boolean isLocationEnabled(LocationManager locationManager) {
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        // return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 }
