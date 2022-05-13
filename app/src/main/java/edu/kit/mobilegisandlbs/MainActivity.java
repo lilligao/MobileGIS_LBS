@@ -29,8 +29,12 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.Iterator;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
     private TextView text;
+    private TextView provider;
     int PERMISSION_ID = 44;
     // initializing
     // FusedLocationProviderClient
@@ -41,25 +45,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        provider = (TextView) findViewById(R.id.provider);
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        List<String> providerNames = locationManager.getAllProviders();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Iterator<String> iterator = providerNames.iterator(); iterator.hasNext();){
+            stringBuilder.append(iterator.next()+"\n");
+        }
+        provider.setText(stringBuilder.toString());
+
         text = (TextView) findViewById(R.id.location_coord);
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         // method to get the location
         getLastLocation();
-
-//        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-//        List<String> providerNames = locationManager.getAllProviders();
-//        StringBuilder stringBuilder = new StringBuilder();
-//        for (Iterator<String> iterator = providerNames.iterator(); iterator.hasNext();){
-//            stringBuilder.append(iterator.next()+"\n");
-//        }
-//        text.setText(stringBuilder.toString());
 //
 //        LocationListener locationListener = new MyLocationListener();
 //
 //        locationManager.requestLocationUpdates(
 //                LocationManager.GPS_PROVIDER,//GPS as provider
-//                0,//update every 1 sec
-//                0,//every 1 m
+//                1000,//update every 1 sec
+//                1000,//every 1 m
 //                locationListener
 //        );
 //        Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -146,8 +152,8 @@ public class MainActivity extends AppCompatActivity {
     // if location is enabled
     private boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-     //   return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        //return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
     // If everything is alright then

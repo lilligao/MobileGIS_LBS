@@ -13,8 +13,15 @@
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_above="@id/provider"
+        android:text="your current provider and location:"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/provider"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_above="@id/location_coord"
-        android:text="your current location:"
         android:textSize="18sp" />
 
     <TextView
@@ -23,6 +30,6 @@
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:textSize="18sp" />
- />
+
 
 </RelativeLayout>
