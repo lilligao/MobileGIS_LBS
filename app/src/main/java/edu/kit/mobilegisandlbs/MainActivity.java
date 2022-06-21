@@ -2,6 +2,7 @@ package edu.kit.mobilegisandlbs;
 
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -20,36 +21,53 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
+    private static final int DEFAULT_ZOOM = 15;
     int PERMISSION_ID = 44;
+    LatLng currentPosition;
+
+    GoogleMap googleMap;
     // initializing
     // FusedLocationProviderClient
     // object
     // FusedLocationProviderClient mFusedLocationClient;
 
-
-    @RequiresApi(api = Build.VERSION_CODES.O) // Denotes that the annotated element should only be called on the given API
+    // [START_EXCLUDE]
+    // [START maps_marker_get_map_async]
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Retrieve the content view that renders the map.
         setContentView(R.layout.activity_main);
 
-        TextView provider = findViewById(R.id.provider);
+        // Get the SupportMapFragment and request notification when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        this.googleMap = googleMap;
+        getDeviceLocation();
+    }
+
+    private void getDeviceLocation(){
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        List<String> providerNames = locationManager.getAllProviders();
-        StringBuilder stringBuilder = new StringBuilder();
-        for (String providerName : providerNames) {
-            stringBuilder.append(providerName).append("\n");
-        }
-        provider.setText(stringBuilder.toString());
-        // get text field by id
-        TextView text = findViewById(R.id.location_coord);
-        // Create location services client
-        // mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        // method to get the location
-        // getLastLocation();
 
         // check if location is enabled
         if (isLocationEnabled(locationManager)) {
@@ -58,9 +76,7 @@ public class MainActivity extends AppCompatActivity {
             if (location == null) {
                 location = requestNewLocationData(locationManager);
             }
-            // getAccuracy (): Returns the estimated horizontal accuracy radius in meters of this location at the 68th percentile confidence level.
-            // getVerticalAccuracyMeters (): Returns the estimated altitude accuracy in meters of this location at the 68th percentile confidence level.
-            text.setText("GPS Provider Location\nLatitude: " + location.getLatitude() + "\nLongitude: " + location.getLongitude() + "\nAltitude: " + location.getAltitude() + "\nHorizontal accuracy radius: " + location.getAccuracy() + "m\nAltitude accuracy: " + location.getVerticalAccuracyMeters() + "m");
+            currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
         } else {
             // A toast provides simple feedback about an operation in a small popup.
             Toast.makeText(this, "Please turn on" + " your location...", Toast.LENGTH_LONG).show();
@@ -68,8 +84,17 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(intent);
         }
+
+
+        googleMap.addMarker(new MarkerOptions()
+                .position(currentPosition)
+                .title("Current Position"));
+        // [START_EXCLUDE silent]
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, DEFAULT_ZOOM));
+        // [END_EXCLUDE]
     }
 
+    @SuppressLint("MissingPermission")
     private Location requestNewLocationData(LocationManager locationManager) {
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -81,8 +106,8 @@ public class MainActivity extends AppCompatActivity {
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
             ActivityCompat.requestPermissions(this, new String[]{
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_ID);
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_ID);
         }
         locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,//GPS as provider
@@ -91,6 +116,12 @@ public class MainActivity extends AppCompatActivity {
                 new LocationListener() {
                     @Override
                     public void onLocationChanged(@NonNull Location location) {
+                        currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                        googleMap.addMarker(new MarkerOptions()
+                                .position(currentPosition)
+                                .title("Current Position"));
+                        // [START_EXCLUDE silent]
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition,DEFAULT_ZOOM));
                     }
 
                     @Override
@@ -117,4 +148,7 @@ public class MainActivity extends AppCompatActivity {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         // return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
+
+
+
 }
